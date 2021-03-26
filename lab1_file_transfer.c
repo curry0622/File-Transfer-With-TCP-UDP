@@ -12,12 +12,12 @@
 #define BUFFER_SIZE 1024
 
 // print error message and exit program
-void err(char* err_msg[]) {
+void err(char* err_msg) {
   fputs(err_msg, stdout);
   exit(-1);
 }
 
-void tcp_send(in_addr_t ip, int port, char* file_name[]) {
+void tcp_send(in_addr_t ip, int port, char* file_name) {
 
 }
 
@@ -25,7 +25,7 @@ void tcp_recv(in_addr_t ip, int port) {
 
 }
 
-void udp_send(in_addr_t ip, int port, char* file_name[]) {
+void udp_send(in_addr_t ip, int port, char* file_name) {
   // create udp socket
   int sock;
   if ((sock = socket(PF_INET, SOCK_DGRAM, 0) < 0)) {
@@ -73,7 +73,7 @@ void udp_send(in_addr_t ip, int port, char* file_name[]) {
   uint64_t file_size = file_stat.st_size;
 
   // send file size to client
-  sendto(sock, file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
+  sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
 
   // start sending file content
   while (!feof(fp)) {
