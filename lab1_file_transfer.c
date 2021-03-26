@@ -92,6 +92,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   }
 
   // finish sending file content
+  fclose(fp);
   sendto(sock, "EOF", 3, 0, (struct sockaddr *)&cli_addr, cli_len);
   printf("[INFO] File transfer fininshed\n");
 
@@ -101,6 +102,65 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
 }
 
 void udp_recv(in_addr_t ip, int port) {
+  // create udp socket
+  int sock;
+  if ((sock = socket(PF_INET, SOCK_DGRAM, 0) < 0)) {
+    err("[ERR] Socket error\n");
+  }
+
+  // initialize server info
+  struct sockaddr_in srv_addr;
+  memset(&srv_addr, 0, sizeof(srv_addr));
+  socklen_t srv_len = sizeof(srv_addr);
+  srv_addr.sin_family = AF_INET;
+  srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  srv_addr.sin_port = htons(port);
+
+  // binding
+  if (bind(sock, (struct sockaddr*)&srv_addr, sizeof(srv_len)) < 0) {
+    err("[ERR] Bind error\n");
+  }
+
+  // buffer
+  char buf[BUFFER_SIZE] = {0};
+  memset(buf, 0, sizeof(buf));
+
+  // send request to server
+  sendto(sock, "REQUEST", sizeof("REQUEST"), 0, (struct sockaddr *)&srv_addr, srv_len);
+
+  // get file size from server
+  uint64_t file_size;
+  recvfrom(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&srv_addr, &srv_len);
+
+  // open file
+  FILE* fp = fopen("recv.txt", "w");
+  if (fp == NULL) {
+    err("[ERR] File open error\n");
+  }
+
+  while (1) {
+    // clear buffer
+    memset(buf, 0, sizeof(buf));
+
+    // get file content from server
+    int recv_len = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&srv_addr, &srv_len);
+    if (recv_len == -1) {
+      err("[ERR] Receive error\n");
+    }
+
+    // if file transfer fininshed
+    if (strcmp("EOF", buf) == 0) {
+      fclose(fp);
+      break;
+    }
+
+    // write to file
+    int write_len = fwrite(buf, sizeof(char), recv_len, fp);
+    printf("[INFO] Write %d fo data to recv.txt", write_len);
+  }
+
+  // close socket
+  close(sock);
 
 }
 
