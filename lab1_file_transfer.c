@@ -20,7 +20,7 @@ void err(char* err_msg) {
 void tcp_send(in_addr_t ip, int port, char* file_name) {
   // socket
   int sock, cli_sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     err("[ERR] Socket error\n");
   }
 
@@ -45,8 +45,7 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
   listen(sock, 5);
 
   // accept
-  cli_sock = accept(cli_sock, (struct sockaddr *)&cli_addr, &cli_len);
-  if (cli_sock < 0)
+  if((cli_sock = accept(sock, (struct sockaddr *)&cli_addr, &cli_len)) < 0)
     err("[ERR] Accept error\n");
 
   // open file
@@ -62,7 +61,7 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
   printf("[INFO] File size = %ld\n", file_size);
 
   // send file size to client
-  sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
+  write(cli_sock, &file_size, sizeof(file_size));
 
   // start sending file content to client
   while (!feof(fp)) {
@@ -73,12 +72,12 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
     int send_len = fread(buf, sizeof(char), sizeof(buf), fp);
 
     // send to client
-    send(cli_sock, buf, send_len, 0);
+    write(cli_sock, buf, send_len);
+    printf("[INFO] Send %d to of data\n", send_len);
   }
 
   // finish sending file content
   fclose(fp);
-  send(cli_sock, "EOF", 3, 0);
   printf("[INFO] File transfer finished\n");
 
   // close socket
@@ -88,6 +87,64 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
 }
 
 void tcp_recv(in_addr_t ip, int port) {
+  // socket
+  int sock;
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    err("[ERR] Socket error\n");
+  }
+
+  // initialize
+  struct sockaddr_in serv_addr;
+  memset(&serv_addr, 0, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = ip;
+  serv_addr.sin_port = htons(port);
+
+  // connect
+  if(connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    err("[ERR] Connect error\n");
+  }
+
+  // buffer
+  char buf[BUFFER_SIZE] = {0};
+  memset(buf, 0, sizeof(buf));
+
+  // get file size from server
+  uint64_t file_size;
+  read(sock, &file_size, sizeof(file_size));
+  printf("[INFO] Get file size = %ld\n", file_size);
+
+  // open file
+  FILE* fp = fopen("recv.txt", "w");
+  if (fp == NULL) {
+    err("[ERR] File open error\n");
+  }
+
+  while (1) {
+    // clear buffer
+    memset(buf, 0, sizeof(buf));
+
+    // get file content from server
+    int recv_len = read(sock, buf, sizeof(buf));
+    if (recv_len == -1) {
+      err("[ERR] Receive error\n");
+    }
+
+    // if received data length = 0
+    if (recv_len == 0) {
+      fclose(fp);
+      break;
+    }
+
+    // write to file
+    int write_len = fwrite(buf, sizeof(char), recv_len, fp);
+    printf("[INFO] Write %d fo data to recv.txt\n", write_len);
+
+  }
+
+  // close socket
+  printf("[INFO] File transfer fininshed\n");
+  close(sock);
 
 }
 
