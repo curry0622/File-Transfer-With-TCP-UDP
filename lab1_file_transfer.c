@@ -28,7 +28,7 @@ void tcp_recv(in_addr_t ip, int port) {
 void udp_send(in_addr_t ip, int port, char* file_name) {
   // create udp socket
   int sock;
-  if ((sock = socket(PF_INET, SOCK_DGRAM, 0) < 0)) {
+  if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
     err("[ERR] Socket error\n");
   }
 
@@ -37,8 +37,8 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   memset(&cli_addr, 0, sizeof(cli_addr));
   socklen_t cli_len = sizeof(cli_addr);
   cli_addr.sin_family = AF_INET;
-  cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
   cli_addr.sin_port = htons(port);
+  cli_addr.sin_addr.s_addr = htons(INADDR_ANY);
 
   // binding
   if (bind(sock, (struct sockaddr*)&cli_addr, sizeof(cli_addr)) < 0) {
@@ -57,6 +57,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   if (strcmp("REQUEST", buf) != 0) {
     err("[ERR] Wrong request message from client\n");
   }
+  printf("[INFO] Client request success\n");
 
   // variables for tracking sending progress
   int percent = 0;
@@ -104,7 +105,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
 void udp_recv(in_addr_t ip, int port) {
   // create udp socket
   int sock;
-  if ((sock = socket(PF_INET, SOCK_DGRAM, 0) < 0)) {
+  if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
     err("[ERR] Socket error\n");
   }
 
@@ -117,9 +118,9 @@ void udp_recv(in_addr_t ip, int port) {
   srv_addr.sin_port = htons(port);
 
   // binding
-  if (bind(sock, (struct sockaddr*)&srv_addr, sizeof(srv_len)) < 0) {
-    err("[ERR] Bind error\n");
-  }
+  // if (bind(sock, (struct sockaddr*)&srv_addr, sizeof(srv_len)) < 0) {
+  //   err("[ERR] Bind error\n");
+  // }
 
   // buffer
   char buf[BUFFER_SIZE] = {0};
@@ -156,10 +157,11 @@ void udp_recv(in_addr_t ip, int port) {
 
     // write to file
     int write_len = fwrite(buf, sizeof(char), recv_len, fp);
-    printf("[INFO] Write %d fo data to recv.txt", write_len);
+    printf("[INFO] Write %d fo data to recv.txt\n", write_len);
   }
 
   // close socket
+  printf("[INFO] File transfer fininshed\n");
   close(sock);
 
 }
