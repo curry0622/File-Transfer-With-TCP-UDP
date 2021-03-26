@@ -38,7 +38,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   socklen_t cli_len = sizeof(cli_addr);
   cli_addr.sin_family = AF_INET;
   cli_addr.sin_port = htons(port);
-  cli_addr.sin_addr.s_addr = htons(INADDR_ANY);
+  cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
   // binding
   if (bind(sock, (struct sockaddr*)&cli_addr, sizeof(cli_addr)) < 0) {
@@ -72,9 +72,11 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   struct stat file_stat;
   stat(file_name, &file_stat);
   uint64_t file_size = file_stat.st_size;
+  printf("[INFO] File size = %ld\n", file_size);
 
   // send file size to client
   sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
+  printf("[INFO] %d%%\n", percent);
 
   // start sending file content
   while (!feof(fp)) {
@@ -95,6 +97,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   // finish sending file content
   fclose(fp);
   sendto(sock, "EOF", 3, 0, (struct sockaddr *)&cli_addr, cli_len);
+  printf("[INFO] 100%%\n");
   printf("[INFO] File transfer fininshed\n");
 
   // close socket
@@ -114,13 +117,8 @@ void udp_recv(in_addr_t ip, int port) {
   memset(&srv_addr, 0, sizeof(srv_addr));
   socklen_t srv_len = sizeof(srv_addr);
   srv_addr.sin_family = AF_INET;
-  srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
   srv_addr.sin_port = htons(port);
-
-  // binding
-  // if (bind(sock, (struct sockaddr*)&srv_addr, sizeof(srv_len)) < 0) {
-  //   err("[ERR] Bind error\n");
-  // }
+  srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
   // buffer
   char buf[BUFFER_SIZE] = {0};
@@ -132,6 +130,7 @@ void udp_recv(in_addr_t ip, int port) {
   // get file size from server
   uint64_t file_size;
   recvfrom(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&srv_addr, &srv_len);
+  printf("[INFO] File size = %ld\n", file_size);
 
   // open file
   FILE* fp = fopen("recv.txt", "w");
