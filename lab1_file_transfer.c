@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #define BUFFER_SIZE 1024
 
@@ -312,7 +313,6 @@ void udp_recv(in_addr_t ip, int port) {
   // get file size from server
   uint64_t file_size;
   recvfrom(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&srv_addr, &srv_len);
-  printf("[INFO] File size = %ld\n", file_size);
 
   // open file
   FILE* fp = fopen("recv.txt", "w");
@@ -325,10 +325,21 @@ void udp_recv(in_addr_t ip, int port) {
   int partition_25 = file_size * 0.25;
   int partition_50 = file_size * 0.5;
   int partition_75 = file_size * 0.75;
-  printf("[RECORD] 0%%\n");
+  printf("[RECORD] 0%%  ");
+
+  // time
+  time_t timer;
+  clock_t start, end;
+  start = clock();
+  struct tm* Now;
+
+  time(&timer) ;
+  Now = localtime(&timer) ;
+  printf("%s", asctime(Now)) ;
 
   // for loss
   uint64_t recv_size = 0;
+
 
   while (1) {
     // clear buffer
@@ -353,23 +364,39 @@ void udp_recv(in_addr_t ip, int port) {
     // progress record
     curr_progress += recv_len;
     if (partition_25 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_25 + BUFFER_SIZE / 2) {
-      printf("[RECORD] 25%%\n");
+      printf("[RECORD] 25%%  ");
+      time(&timer) ;
+      Now = localtime(&timer) ;
+      printf("%s", asctime(Now)) ;
     }
     if (partition_50 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_50 + BUFFER_SIZE / 2) {
-      printf("[RECORD] 50%%\n");
+      printf("[RECORD] 50%%  ");
+      time(&timer) ;
+      Now = localtime(&timer) ;
+      printf("%s", asctime(Now)) ;
     }
     if (partition_75 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_75 + BUFFER_SIZE / 2) {
-      printf("[RECORD] 75%%\n");
+      printf("[RECORD] 75%%  ");
+      time(&timer) ;
+      Now = localtime(&timer) ;
+      printf("%s", asctime(Now)) ;
     }
 
   }
 
   // close socket
-  printf("[RECORD] 100%%\n");
+  printf("[RECORD] 100%%  ");
+  time(&timer) ;
+  Now = localtime(&timer) ;
+  printf("%s", asctime(Now)) ;
+  end = clock();
+
   printf("[INFO] File transfer fininshed\n");
   printf("[INFO] Loss rate = %.2f%%\n", 100 * ((double) (file_size - recv_size) / (double) file_size));
-  printf("[INFO] Loss size = %.2fMB\n", (double)(file_size - recv_size) / 1048576);
-  printf("[INFO] File size = %.2fMB\n", (double)file_size / 1048576);
+  printf("[INFO] Loss size = %.2f MB\n", (double) (file_size - recv_size) / 1048576);
+  printf("[INFO] File size = %.2f MB\n", (double) file_size / 1048576);
+  printf("[INFO] Total time = %.2lf ms\n", (double) (end - start) / (CLOCKS_PER_SEC / 10000));
+  printf("%ld\n", end - start);
   close(sock);
 
 }
