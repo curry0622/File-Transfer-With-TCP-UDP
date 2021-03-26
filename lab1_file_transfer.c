@@ -18,6 +18,72 @@ void err(char* err_msg) {
 }
 
 void tcp_send(in_addr_t ip, int port, char* file_name) {
+  // socket
+  int sock, cli_sock;
+  if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    err("[ERR] Socket error\n");
+  }
+
+  // buffer
+  char buf[BUFFER_SIZE] = {0};
+  memset(buf, 0, sizeof(buf));
+
+  // initialization
+  struct sockaddr_in serv_addr, cli_addr;
+  memset(&serv_addr, 0, sizeof(serv_addr));
+  socklen_t cli_len = sizeof(cli_addr);
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(port);
+
+  // binding
+  if (bind(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    err("[ERR] Bind error\n");
+  }
+
+  // listen
+  listen(sock, 5);
+
+  // accept
+  cli_sock = accept(cli_sock, (struct sockaddr *)&cli_addr, &cli_len);
+  if (cli_sock < 0)
+    err("[ERR] Accept error\n");
+
+  // open file
+  FILE* fp = fopen(file_name, "r");
+  if (fp == NULL) {
+    err("[ERR] Failed to open file\n");
+  }
+
+  // get file size
+  struct stat file_stat;
+  stat(file_name, &file_stat);
+  uint64_t file_size = file_stat.st_size;
+  printf("[INFO] File size = %ld\n", file_size);
+
+  // send file size to client
+  sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
+
+  // start sending file content to client
+  while (!feof(fp)) {
+    // clear buffer
+    memset(buf, 0, sizeof(buf));
+
+    // read data from file
+    int send_len = fread(buf, sizeof(char), sizeof(buf), fp);
+
+    // send to client
+    send(cli_sock, buf, send_len, 0);
+  }
+
+  // finish sending file content
+  fclose(fp);
+  send(cli_sock, "EOF", 3, 0);
+  printf("[INFO] File transfer finished\n");
+
+  // close socket
+  close(sock);
+  close(cli_sock);
 
 }
 
