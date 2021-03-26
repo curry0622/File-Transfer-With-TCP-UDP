@@ -9,7 +9,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define BUFFER_SIZE 10240
+#define BUFFER_SIZE 1024
 
 // print error message and exit program
 void err(char* err_msg) {
@@ -328,7 +328,7 @@ void udp_recv(in_addr_t ip, int port) {
   printf("[RECORD] 0%%\n");
 
   // for loss
-  uint64_t loss_len = 0;
+  uint64_t recv_size = 0;
 
   while (1) {
     // clear buffer
@@ -346,13 +346,9 @@ void udp_recv(in_addr_t ip, int port) {
       break;
     }
 
-    // record loss
-    if (recv_len != sizeof(buf)) {
-      loss_len += sizeof(buf) - recv_len;
-    }
-
     // write to file
-    fwrite(buf, sizeof(char), recv_len, fp);
+    int write_len = fwrite(buf, sizeof(char), recv_len, fp);
+    recv_size += write_len;
 
     // progress record
     curr_progress += recv_len;
@@ -369,9 +365,11 @@ void udp_recv(in_addr_t ip, int port) {
   }
 
   // close socket
+  printf("[RECORD] 100%%\n");
   printf("[INFO] File transfer fininshed\n");
-  printf("[INFO] Loss rate = %ld%%\n", loss_len / file_size * 100);
-  printf("[INFO] Loss size = %ld\n", loss_len );
+  printf("[INFO] Loss rate = %.2f%%\n", 100 * ((double) (file_size - recv_size) / (double) file_size));
+  printf("[INFO] Loss size = %.2fMB\n", (double)(file_size - recv_size) / 1048576);
+  printf("[INFO] File size = %.2fMB\n", (double)file_size / 1048576);
   close(sock);
 
 }
