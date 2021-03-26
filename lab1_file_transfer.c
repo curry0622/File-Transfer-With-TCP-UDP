@@ -9,7 +9,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 10240
 
 // print error message and exit program
 void err(char* err_msg) {
@@ -17,6 +17,7 @@ void err(char* err_msg) {
   exit(-1);
 }
 
+// tcp: send file
 void tcp_send(in_addr_t ip, int port, char* file_name) {
   // socket
   int sock, cli_sock;
@@ -63,6 +64,13 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
   // send file size to client
   write(cli_sock, &file_size, sizeof(file_size));
 
+  // progress record
+  uint64_t curr_progress = 0;
+  int partition_25 = file_size * 0.25;
+  int partition_50 = file_size * 0.5;
+  int partition_75 = file_size * 0.75;
+  printf("[RECORD] 0%%\n");
+
   // start sending file content to client
   while (!feof(fp)) {
     // clear buffer
@@ -72,12 +80,26 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
     int send_len = fread(buf, sizeof(char), sizeof(buf), fp);
 
     // send to client
-    write(cli_sock, buf, send_len);
-    printf("[INFO] Send %d to of data\n", send_len);
+    int write_len = write(cli_sock, buf, send_len);
+    // printf("[INFO] Send %d to of data\n", write_len);
+
+    // progress record
+    curr_progress += write_len;
+    if (partition_25 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_25 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 25%%\n");
+    }
+    if (partition_50 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_50 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 50%%\n");
+    }
+    if (partition_75 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_75 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 75%%\n");
+    }
+
   }
 
   // finish sending file content
   fclose(fp);
+  printf("[RECORD] 100%%\n");
   printf("[INFO] File transfer finished\n");
 
   // close socket
@@ -86,6 +108,7 @@ void tcp_send(in_addr_t ip, int port, char* file_name) {
 
 }
 
+// tcp: receive file
 void tcp_recv(in_addr_t ip, int port) {
   // socket
   int sock;
@@ -120,6 +143,13 @@ void tcp_recv(in_addr_t ip, int port) {
     err("[ERR] File open error\n");
   }
 
+  // progress record
+  uint64_t curr_progress = 0;
+  int partition_25 = file_size * 0.25;
+  int partition_50 = file_size * 0.5;
+  int partition_75 = file_size * 0.75;
+  printf("[RECORD] 0%%\n");
+
   while (1) {
     // clear buffer
     memset(buf, 0, sizeof(buf));
@@ -138,16 +168,29 @@ void tcp_recv(in_addr_t ip, int port) {
 
     // write to file
     int write_len = fwrite(buf, sizeof(char), recv_len, fp);
-    printf("[INFO] Write %d fo data to recv.txt\n", write_len);
+
+    // progress record
+    curr_progress += write_len;
+    if (partition_25 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_25 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 25%%\n");
+    }
+    if (partition_50 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_50 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 50%%\n");
+    }
+    if (partition_75 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_75 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 75%%\n");
+    }
 
   }
 
   // close socket
+  printf("[RECORD] 100%%\n");
   printf("[INFO] File transfer fininshed\n");
   close(sock);
 
 }
 
+// udp: send file
 void udp_send(in_addr_t ip, int port, char* file_name) {
   // create udp socket
   int sock;
@@ -199,7 +242,13 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
 
   // send file size to client
   sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
-  printf("[INFO] %d%%\n", percent);
+
+  // progress record
+  uint64_t curr_progress = 0;
+  int partition_25 = file_size * 0.25;
+  int partition_50 = file_size * 0.5;
+  int partition_75 = file_size * 0.75;
+  printf("[RECORD] 0%%\n");
 
   // start sending file content
   while (!feof(fp)) {
@@ -212,15 +261,23 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
     // send to client
     sendto(sock, buf, send_len, 0, (struct sockaddr *)&cli_addr, cli_len);
 
-    // print percentage
-    percent += ((double) send_len / (double) file_size) * 100;
-    printf("[INFO] %d%%\n", percent);
+    // progress record
+    curr_progress += send_len;
+    if (partition_25 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_25 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 25%%\n");
+    }
+    if (partition_50 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_50 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 50%%\n");
+    }
+    if (partition_75 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_75 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 75%%\n");
+    }
   }
 
   // finish sending file content
   fclose(fp);
   sendto(sock, "EOF", 3, 0, (struct sockaddr *)&cli_addr, cli_len);
-  printf("[INFO] 100%%\n");
+  printf("[RECORD] 100%%\n");
   printf("[INFO] File transfer fininshed\n");
 
   // close socket
@@ -228,6 +285,7 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
 
 }
 
+// udp: receive file
 void udp_recv(in_addr_t ip, int port) {
   // create udp socket
   int sock;
@@ -249,6 +307,7 @@ void udp_recv(in_addr_t ip, int port) {
 
   // send request to server
   sendto(sock, "REQUEST", sizeof("REQUEST"), 0, (struct sockaddr *)&srv_addr, srv_len);
+  printf("[INFO] Send request to client\n");
 
   // get file size from server
   uint64_t file_size;
@@ -260,6 +319,16 @@ void udp_recv(in_addr_t ip, int port) {
   if (fp == NULL) {
     err("[ERR] File open error\n");
   }
+
+  // progress record
+  uint64_t curr_progress = 0;
+  int partition_25 = file_size * 0.25;
+  int partition_50 = file_size * 0.5;
+  int partition_75 = file_size * 0.75;
+  printf("[RECORD] 0%%\n");
+
+  // for loss
+  uint64_t loss_len = 0;
 
   while (1) {
     // clear buffer
@@ -277,17 +346,37 @@ void udp_recv(in_addr_t ip, int port) {
       break;
     }
 
+    // record loss
+    if (recv_len != sizeof(buf)) {
+      loss_len += sizeof(buf) - recv_len;
+    }
+
     // write to file
-    int write_len = fwrite(buf, sizeof(char), recv_len, fp);
-    printf("[INFO] Write %d fo data to recv.txt\n", write_len);
+    fwrite(buf, sizeof(char), recv_len, fp);
+
+    // progress record
+    curr_progress += recv_len;
+    if (partition_25 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_25 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 25%%\n");
+    }
+    if (partition_50 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_50 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 50%%\n");
+    }
+    if (partition_75 - BUFFER_SIZE / 2 <= curr_progress && curr_progress <= partition_75 + BUFFER_SIZE / 2) {
+      printf("[RECORD] 75%%\n");
+    }
+
   }
 
   // close socket
   printf("[INFO] File transfer fininshed\n");
+  printf("[INFO] Loss rate = %ld%%\n", loss_len / file_size * 100);
+  printf("[INFO] Loss size = %ld\n", loss_len );
   close(sock);
 
 }
 
+// main function
 int main(int argc, char* argv[]) {
   // tcp
   if (strcmp(argv[1], "tcp") == 0) {
