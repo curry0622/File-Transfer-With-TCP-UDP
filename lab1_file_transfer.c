@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 16384
 
 // print error message and exit program
 void err(char* err_msg) {
