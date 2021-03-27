@@ -291,7 +291,6 @@ void udp_send(in_addr_t ip, int port, char* file_name) {
   struct stat file_stat;
   stat(file_name, &file_stat);
   uint64_t file_size = file_stat.st_size;
-  printf("[INFO] File size = %ld\n", file_size);
 
   // send file size to client
   sendto(sock, &file_size, sizeof(file_size), 0, (struct sockaddr *)&cli_addr, cli_len);
